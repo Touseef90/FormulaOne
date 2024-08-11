@@ -1,8 +1,12 @@
-﻿using FormulaOne.Configurations;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using FormulaOne.Configurations;
 using FormulaOne.Models;
 using FormulaOne.Models.DTOs;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 
 namespace FormulaOne.Controllers
 {
@@ -53,6 +57,13 @@ namespace FormulaOne.Controllers
                 if (is_created.Succeeded)
                 {
                     // Generate token
+                    var token = GenerateJwtToken(new_user);
+
+                    return Ok(new AuthResults()
+                    {
+                        Result = true,
+                        Token = token
+                    });
                 }
 
                 return BadRequest(new AuthResults()
@@ -66,6 +77,32 @@ namespace FormulaOne.Controllers
             }
 
             return BadRequest();
+        }
+
+        private string GenerateJwtToken(IdentityUser user)
+        {
+            var jwtTokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(_jwtConfig.Secret);
+
+            // Token descryptor
+            var tokenDescryptor = new SecurityTokenDescriptor()
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim("Id", user.Id),
+                    new Claim(JwtRegisteredClaimNames.Sub, user.Email),
+                    new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    new Claim(JwtRegisteredClaimNames.Iat, DateTime.Now.ToUniversalTime().ToString())
+                }),
+
+                Expires = DateTime.Now.AddHours(1),
+
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
+            };
+
+            var token = jwtTokenHandler.CreateToken(tokenDescryptor);
+            return jwtTokenHandler.WriteToken(token);
         }
     }
 }
