@@ -2,6 +2,7 @@ using System.Text;
 using FormulaOne.Configurations;
 using FormulaOne.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -42,6 +43,9 @@ builder.Services.AddAuthentication(options =>
             ValidateLifetime = true
         };
     });
+
+builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = false )
+    .AddEntityFrameworkStores<AppDbContext>();
 
 var app = builder.Build();
 
