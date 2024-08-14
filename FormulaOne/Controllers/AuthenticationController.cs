@@ -79,6 +79,61 @@ namespace FormulaOne.Controllers
             return BadRequest();
         }
 
+        [HttpPost]
+        [Route("Login")]
+        public async Task<IActionResult> Login([FromBody] UserLoginRequestDto loginRequest)
+        {
+            // Validate incoming request
+            if (ModelState.IsValid)
+            {
+                // We need to check if email already exist
+                var existing_user = await _userManager.FindByEmailAsync(loginRequest.Email);
+
+                if (existing_user == null)
+                {
+                    return BadRequest(new AuthResults()
+                    {
+                        Result = false,
+                        Errors = new List<string>()
+                        {
+                            "Invalid payload"
+                        }
+                    });
+                }
+
+                var isCorrect = await _userManager.CheckPasswordAsync(existing_user, loginRequest.Password);
+
+                if (!isCorrect)
+                {
+                    return BadRequest(new AuthResults()
+                    {
+                        Result = false,
+                        Errors = new List<string>()
+                        {
+                            "Invalid payload"
+                        }
+                    });
+                }
+
+                var jwtToken = GenerateJwtToken(existing_user);
+
+                return Ok(new AuthResults()
+                {
+                    Result = true,
+                    Token = jwtToken
+                });
+            }
+
+            return BadRequest(new AuthResults()
+            {
+                Result = false,
+                Errors = new List<string>()
+                        {
+                            "Email already exist"
+                        }
+            });
+        }
+
         private string GenerateJwtToken(IdentityUser user)
         {
             var jwtTokenHandler = new JwtSecurityTokenHandler();
